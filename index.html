@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IdeClubAppPokecaDamageCounter β版</title>
+
+    <!-- ========================================== -->
+    <!-- ▼▼ 1. CSSスタイル (STYLE) ▼▼ -->
+    <!-- ========================================== -->
+    <style>
+        /* --- 変数定義（カラーパレット） --- */
+        :root {
+            --color-bg-fallback: #f4f6f9;
+            --color-primary: #69005e;      /* メインの紫 */
+            --color-primary-light: #8e217d; /* 少し明るい紫 */
+            --color-danger: #c0392b;       /* 落ち着いた赤 */
+            --color-success: #27ae60;      /* 深めの緑 */
+            --color-warning: #d4af37;      /* ゴールド */
+            --color-black: #2c3e50;
+            --color-white: #ffffff;
+            --color-border: #dcdde1;
+        }
+
+        /* --- 全体・ベース設定 --- */
+        body { 
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0; padding: 0; 
+            background-color: var(--color-bg-fallback); 
+            background-image: url('https://storage.googleapis.com/studio-design-asset-files/projects/rROnBmgnOA/s-2400x1350_v-frms_webp_76678232-c42f-4ec8-a7d6-ae5a803548cd_regular.webp'); 
+            background-size: cover;       
+            background-position: center;  
+            background-attachment: fixed; 
+        }
+
+        .container { max-width: 500px; margin: 0 auto; padding: 10px; padding-bottom: 30px;}
+
+        /* --- タブメニュー --- */
+        .tabs { display: flex; background: var(--color-primary); padding: 10px; justify-content: center; gap: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);}
+        .tab-btn { background: rgba(255,255,255,0.1); color: #dcdde1; border: 1px solid rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
+        .tab-btn.active { background: var(--color-white); color: var(--color-primary); border-color: var(--color-white); font-weight: bold; }
+        
+        .screen { display: none; padding: 20px 0; }
+        .screen.active { display: block; }
+
+        /* --- 共通コンポーネント（ボタン・プルダウン） --- */
+        select { font-size: 1rem; padding: 10px; width: 100%; border-radius: 8px; border: 2px solid var(--color-border); margin-bottom: 10px; box-sizing: border-box; outline: none; }
+        button { border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        button:active { transform: translateY(2px); box-shadow: none; }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
+        .bottom-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        
+        /* --- 各種専用パーツ --- */
+        .coin-container { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.9); padding: 12px 20px; border-radius: 12px; margin-bottom: 15px; border: 2px solid var(--color-primary-light);}
+        .btn-coin { background: var(--color-primary); color: white; padding: 10px; font-size: 1.1rem; width: 60%; }
+        .coin-result { font-size: 1.3rem; font-weight: bold; width: 35%; text-align: center; color: var(--color-primary); }
+
+        .vstar-marker { background: linear-gradient(135deg, #f3cf44, #d4af37); color: #5d4037; text-align: center; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 1.2rem; margin-bottom: 15px; cursor: pointer; border: 2px solid #b8860b; }
+        .vstar-marker.used { background: #7f8c8d; border-color: #95a5a6; color: #bdc3c7; box-shadow: none; }
+
+        .active-area { background: rgba(255,255,255,0.92); border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; border: 3px solid var(--color-primary);}
+        .active-label { color: var(--color-primary); font-weight: bold; margin-bottom: 10px; }
+        .damage-display { font-size: 4.5rem; font-weight: bold; color: var(--color-black); margin: 10px 0; }
+        
+        .status-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 15px; }
+        .status-btn { padding: 8px 12px; border-radius: 20px; border: 2px solid var(--color-border); background: white; cursor: pointer; font-size: 0.9rem; font-weight: bold; color: #7f8c8d; }
+        .status-btn.active.poison { background-color: #9b59b6; border-color: #8e44ad; color: white; }
+        .status-btn.active.burn { background-color: #e67e22; border-color: #d35400; color: white; }
+        .status-btn.active.asleep { background-color: #3498db; border-color: #2980b9; color: white; }
+        .status-btn.active.paralyzed { background-color: #f1c40f; border-color: #f39c12; color: #333; }
+        .status-btn.active.confused { background-color: #1abc9c; border-color: #16a085; color: white; }
+
+        .bench-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .bench-area { background: rgba(255,255,255,0.92); border-radius: 8px; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; border: 2px solid var(--color-primary-light);}
+        .bench-label { color: var(--color-primary-light); font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; }
+        .bench-damage-display { font-size: 2.2rem; font-weight: bold; margin: 5px 0; }
+        .bench-actions { display: flex; gap: 5px; margin-top: 5px; }
+        
+        .btn-plus { background-color: var(--color-danger); color: white; padding: 10px; font-size: 1.2rem; }
+        .btn-minus { background-color: #95a5a6; color: white; padding: 10px; font-size: 1.2rem; }
+        .btn-switch { background-color: var(--color-primary-light); color: white; flex: 1; padding: 10px 5px; font-size: 0.9rem; }
+        .btn-bench-faint { background-color: var(--color-black); color: white; padding: 10px 15px; font-size: 1rem; }
+        .btn-full-heal { background-color: var(--color-success); color: white; padding: 15px; font-size: 1.1rem; }
+        .btn-faint { background-color: var(--color-black); color: white; padding: 15px; font-size: 1.1rem; }
+        .btn-danger-reset { background-color: var(--color-danger); color: white; width: 100%; padding: 15px; font-size: 1.1rem; margin-top: 20px; }
+        
+        /* --- 登録画面用 --- */
+        .setup-box { background: rgba(255,255,255,0.95); border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); box-sizing: border-box; width: 100%; }
+        .input-group { display: flex; gap: 8px; margin-bottom: 20px; width: 100%; }
+        .input-group input { flex: 1; min-width: 0; padding: 10px; font-size: 1rem; border: 2px solid var(--color-border); border-radius: 5px; box-sizing: border-box;}
+        .input-group button { padding: 10px 15px; background: var(--color-success); color: white; font-size: 1rem; flex-shrink: 0; white-space: nowrap; }
+        
+        #pokemon-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 1.1rem; }
+        .btn-delete { background-color: var(--color-danger); color: white; padding: 6px 12px; font-size: 0.9rem; border-radius: 4px; flex-shrink: 0; white-space: nowrap; }
+    </style>
+</head>
+<body>
+
+    <!-- ========================================== -->
+    <!-- ▼▼ 2. 上部タブメニュー ▼▼ -->
+    <!-- ========================================== -->
+    <div class="tabs">
+        <button id="tab-battle" class="tab-btn active" onclick="app.switchTab('battle')">バトル画面</button>
+        <button id="tab-setup" class="tab-btn" onclick="app.switchTab('setup')">ポケモン登録</button>
+    </div>
+
+    <div class="container">
+        
+        <!-- ========================================== -->
+        <!-- ▼▼ 3. バトル画面 (Battle Screen) ▼▼ -->
+        <!-- ========================================== -->
+        <div id="screen-battle" class="screen active">
+
+            <!-- コイントスUI -->
+            <div class="coin-container">
+                <button class="btn-coin" onclick="app.tossCoin()">🪙 コイントス</button>
+                <span id="coin-result" class="coin-result">---</span>
+            </div>
+
+            <!-- VSTARマーカー -->
+            <div id="vstar-btn" class="vstar-marker" onclick="app.toggleVSTAR()">✨ VSTARパワー：未使用</div>
+
+            <!-- バトル場エリア -->
+            <div class="active-area">
+                <div class="active-label">⚔️ バトル場</div>
+                <select id="select-0" onchange="app.updatePokemonSelection(0, this.value)"></select>
+                
+                <div class="status-container">
+                    <button id="status-poison" class="status-btn poison" onclick="app.toggleStatus('poison')">🟣 どく</button>
+                    <button id="status-burn" class="status-btn burn" onclick="app.toggleStatus('burn')">🔥 やけど</button>
+                    <button id="status-asleep" class="status-btn asleep" onclick="app.toggleExclusiveStatus('asleep')">💤 ねむり</button>
+                    <button id="status-paralyzed" class="status-btn paralyzed" onclick="app.toggleExclusiveStatus('paralyzed')">⚡ マヒ</button>
+                    <button id="status-confused" class="status-btn confused" onclick="app.toggleExclusiveStatus('confused')">💫 こんらん</button>
+                </div>
+
+                <div id="damage-0" class="damage-display">0</div>
+                
+                <div class="btn-grid">
+                    <button class="btn-plus" onclick="app.changeDamage(0, 10)">+10</button>
+                    <button class="btn-plus" onclick="app.changeDamage(0, 50)">+50</button>
+                    <button class="btn-minus" onclick="app.changeDamage(0, -10)">-10</button>
+                    <button class="btn-minus" onclick="app.changeDamage(0, -50)">-50</button>
+                </div>
+                <div class="bottom-btn-grid">
+                    <button class="btn-full-heal" onclick="app.changeDamage(0, -999)">✨ 全回復</button>
+                    <button class="btn-faint" onclick="app.faintActivePokemon()">☠️ きぜつ・退場</button>
+                </div>
+            </div>
+
+            <!-- ベンチエリア（JSで動的に生成されるコンテナ） -->
+            <div id="bench-container" class="bench-container"></div>
+        </div>
+
+
+        <!-- ========================================== -->
+        <!-- ▼▼ 4. 登録画面 (Setup Screen) ▼▼ -->
+        <!-- ========================================== -->
+        <div id="screen-setup" class="screen">
+            <div class="setup-box">
+                
+                <!-- 新規追加入力欄 -->
+                <h2>デッキのポケモンを追加</h2>
+                <div class="input-group">
+                    <input type="text" id="new-pokemon" placeholder="ポケモンの名前を入力">
+                    <button onclick="app.addPokemon()">追加</button>
+                </div>
+
+                <!-- 登録済みリスト -->
+                <h3>登録済みリスト</h3>
+                <ul id="pokemon-list"></ul>
+                
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #ccc;">
+                
+                <!-- 全データリセット -->
+                <h3>データ管理</h3>
+                <button class="btn-danger-reset" onclick="app.resetAllData()">⚠️ すべてのデータを初期化</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- ▼▼ 5. JavaScript ロジック (SCRIPT) ▼▼ -->
+    <!-- ========================================== -->
+    <script>
+        // 定数定義
+        const SYSTEM_CONFIG = {
+            BATTLE_SLOT_INDEX: 0,       
+            MAX_BENCH_COUNT: 5,         
+            TOTAL_SLOT_COUNT: 6,        
+            EMPTY_POKEMON_NAME: "未設定", 
+            HEAL_ALL_CODE: -999,        
+            MINIMUM_DAMAGE: 0           
+        };
+
+        const STORAGE_KEYS = {
+            ROSTER_LIST: 'pokeca_saved_roster',
+            BOARD_SLOTS: 'pokeca_saved_slots',
+            VSTAR_STATE: 'pokeca_saved_vstar',
+            STATUS_CONDITIONS: 'pokeca_saved_status'
+        };
+
+        const STATUS_TYPES = {
+            POISON: 'poison',
+            BURN: 'burn',
+            ASLEEP: 'asleep',
+            PARALYZED: 'paralyzed',
+            CONFUSED: 'confused'
+        };
+
+        const INITIAL_DECK_ROSTER = [
+            SYSTEM_CONFIG.EMPTY_POKEMON_NAME, 
+            "ピカチュウ", 
+            "ポッポ", 
+            "キャタピー"
+        ];
+
+        const UI_MESSAGES = {
+            RESET_CONFIRM: "本当にすべてのデータを初期化しますか？\n（登録したポケモンや現在のダメージがすべて消えます）",
+            RESET_SUCCESS: "データを初期化しました。",
+            ACTIVE_FAINT_ALERT: "バトルポケモンがきぜつしました。\n新しいポケモンをバトル場に出してください。",
+            VSTAR_UNUSED: "✨ VSTARパワー：未使用",
+            VSTAR_USED: "✖ VSTARパワー：使用済み",
+            COIN_TOSSING: "判定中...",
+            COIN_HEADS: "🟢 表",
+            COIN_TAILS: "🔴 裏",
+            DELETE_CONFIRM: (pokemonName) => `「${pokemonName}」をリストから削除しますか？`
+        };
+
+        // アプリケーションクラス
+        class PokecaApp {
+            
+            /**
+             * アプリの初期化処理
+             * @param なし
+             * @returns {void}
+             * @note インスタンス生成時にプロパティの初期化と画面描画を実行します。
+             */
+            constructor() {
+                this.roster = [...INITIAL_DECK_ROSTER];
+                this.slots = Array.from({ length: SYSTEM_CONFIG.TOTAL_SLOT_COUNT }, () => ({ 
+                    pokemon: SYSTEM_CONFIG.EMPTY_POKEMON_NAME, 
+                    damage: SYSTEM_CONFIG.MINIMUM_DAMAGE 
+                }));
+                this.vstarUsed = false;
+                this.activeStatus = { 
+                    [STATUS_TYPES.POISON]: false, 
+                    [STATUS_TYPES.BURN]: false, 
+                    exclusive: null 
+                };
+
+                this.loadData();
+                this.renderBench();
+                this.updateAllSelects();
+                this.renderSetupList();
+                this.updateAllDamageDisplays();
+                this.updateVstarDisplay();
+                this.updateStatusDisplay();
+            }
+
+            /**
+             * 現在のアプリ状態をローカルストレージに保存する
+             * @param なし
+             * @returns {void}
+             */
+            saveData() {
+                localStorage.setItem(STORAGE_KEYS.ROSTER_LIST, JSON.stringify(this.roster));
+                localStorage.setItem(STORAGE_KEYS.BOARD_SLOTS, JSON.stringify(this.slots));
+                localStorage.setItem(STORAGE_KEYS.VSTAR_STATE, JSON.stringify(this.vstarUsed));
+                localStorage.setItem(STORAGE_KEYS.STATUS_CONDITIONS, JSON.stringify(this.activeStatus));
+            }
+
+            /**
+             * ローカルストレージから保存された状態を読み込む
+             * @param なし
+             * @returns {void}
+             * @note 保存データが存在しない場合は初期値が維持されます。
+             */
+            loadData() {
+                const savedRoster = localStorage.getItem(STORAGE_KEYS.ROSTER_LIST);
+                const savedSlots = localStorage.getItem(STORAGE_KEYS.BOARD_SLOTS);
+                const savedVstar = localStorage.getItem(STORAGE_KEYS.VSTAR_STATE);
+                const savedStatus = localStorage.getItem(STORAGE_KEYS.STATUS_CONDITIONS);
+                
+                if (savedRoster) this.roster = JSON.parse(savedRoster);
+                if (savedSlots) this.slots = JSON.parse(savedSlots);
+                if (savedVstar) this.vstarUsed = JSON.parse(savedVstar);
+                if (savedStatus) this.activeStatus = JSON.parse(savedStatus);
+            }
+
+            /**
+             * アプリの全データを初期状態へリセットする
+             * @param なし
+             * @returns {void}
+             * @note 実行前にユーザーへ確認ダイアログを表示します。
+             */
+            resetAllData() {
+                if (!confirm(UI_MESSAGES.RESET_CONFIRM)) return;
+                localStorage.clear();
+                this.roster = [...INITIAL_DECK_ROSTER];
+                this.slots = Array.from({ length: SYSTEM_CONFIG.TOTAL_SLOT_COUNT }, () => ({ 
+                    pokemon: SYSTEM_CONFIG.EMPTY_POKEMON_NAME, 
+                    damage: SYSTEM_CONFIG.MINIMUM_DAMAGE 
+                }));
+                this.vstarUsed = false;
+                this.clearStatus();
+                this.updateAllSelects();
+                this.renderSetupList();
+                this.updateAllDamageDisplays();
+                this.updateVstarDisplay();
+                document.getElementById('coin-result').textContent = "---";
+                document.getElementById('coin-result').style.color = "var(--color-black)";
+                alert(UI_MESSAGES.RESET_SUCCESS);
+            }
+
+            /**
+             * コイントスを実行し、結果を画面に表示する
+             * @param なし
+             * @returns {void}
+             * @note 演出のため300ミリ秒後に結果（表/裏）を表示します。
+             */
+            tossCoin() {
+                const resultDisplay = document.getElementById('coin-result');
+                resultDisplay.textContent = UI_MESSAGES.COIN_TOSSING;
+                resultDisplay.style.color = "var(--color-black)";
+                setTimeout(() => {
+                    const isHeads = Math.random() < 0.5;
+                    resultDisplay.textContent = isHeads ? UI_MESSAGES.COIN_HEADS : UI_MESSAGES.COIN_TAILS;
+                    resultDisplay.style.color = isHeads ? "var(--color-success)" : "var(--color-danger)";
+                }, 300);
+            }
+
+            /**
+             * VSTARパワーの使用済み/未使用状態を切り替える
+             * @param なし
+             * @returns {void}
+             */
+            toggleVSTAR() {
+                this.vstarUsed = !this.vstarUsed;
+                this.updateVstarDisplay();
+                this.saveData();
+            }
+
+            /**
+             * VSTARマーカーのUI（テキストと見た目）を更新する
+             * @param なし
+             * @returns {void}
+             */
+            updateVstarDisplay() {
+                const btn = document.getElementById('vstar-btn');
+                btn.textContent = this.vstarUsed ? UI_MESSAGES.VSTAR_USED : UI_MESSAGES.VSTAR_UNUSED;
+                this.vstarUsed ? btn.classList.add('used') : btn.classList.remove('used');
+            }
+
+            /**
+             * 「どく」「やけど」の状態を個別に切り替える
+             * @param {string} type - 状態異常のタイプ（STATUS_TYPES定数）
+             * @returns {void}
+             */
+            toggleStatus(type) {
+                this.activeStatus[type] = !this.activeStatus[type];
+                this.updateStatusDisplay();
+                this.saveData();
+            }
+
+            /**
+             * 「ねむり」「マヒ」「こんらん」の状態を排他的に切り替える
+             * @param {string} type - 状態異常のタイプ（STATUS_TYPES定数）
+             * @returns {void}
+             * @note ルール上、これら3つは同時にかからず上書きされます。
+             */
+            toggleExclusiveStatus(type) {
+                this.activeStatus.exclusive = (this.activeStatus.exclusive === type) ? null : type;
+                this.updateStatusDisplay();
+                this.saveData();
+            }
+
+            /**
+             * バトル場のすべての状態異常を解除する
+             * @param なし
+             * @returns {void}
+             * @note 交代時やきぜつ時に呼び出されます。
+             */
+            clearStatus() {
+                this.activeStatus = { [STATUS_TYPES.POISON]: false, [STATUS_TYPES.BURN]: false, exclusive: null };
+                this.updateStatusDisplay();
+            }
+
+            /**
+             * 状態異常ボタンのUI（アクティブ状態）を更新する
+             * @param なし
+             * @returns {void}
+             */
+            updateStatusDisplay() {
+                document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+                if (this.activeStatus[STATUS_TYPES.POISON]) document.getElementById('status-poison').classList.add('active');
+                if (this.activeStatus[STATUS_TYPES.BURN]) document.getElementById('status-burn').classList.add('active');
+                if (this.activeStatus.exclusive) document.getElementById(`status-${this.activeStatus.exclusive}`).classList.add('active');
+            }
+
+            /**
+             * ベンチ枠（1〜5）のHTMLを生成し、画面に描画する
+             * @param なし
+             * @returns {void}
+             */
+            renderBench() {
+                const container = document.getElementById('bench-container');
+                container.innerHTML = '';
+                for (let i = 1; i <= SYSTEM_CONFIG.MAX_BENCH_COUNT; i++) {
+                    container.innerHTML += `
+                        <div class="bench-area">
+                            <div class="bench-label">ベンチ ${i}</div>
+                            <select id="select-${i}" onchange="app.updatePokemonSelection(${i}, this.value)"></select>
+                            <div id="damage-${i}" class="bench-damage-display">${SYSTEM_CONFIG.MINIMUM_DAMAGE}</div>
+                            <div class="btn-grid">
+                                <button class="btn-plus" onclick="app.changeDamage(${i}, 10)">+10</button>
+                                <button class="btn-minus" onclick="app.changeDamage(${i}, -10)">-10</button>
+                            </div>
+                            <div class="bench-actions">
+                                <button class="btn-switch" onclick="app.swapWithActive(${i})">⬆ 交代</button>
+                                <button class="btn-bench-faint" onclick="app.faintBenchPokemon(${i})" title="きぜつ">☠️</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            /**
+             * 全スロットのポケモン選択プルダウンを最新化する
+             * @param なし
+             * @returns {void}
+             * @note ポケモンリストの変更時や交代時に呼ばれます。
+             */
+            updateAllSelects() {
+                for (let i = 0; i < SYSTEM_CONFIG.TOTAL_SLOT_COUNT; i++) {
+                    const selectElement = document.getElementById(`select-${i}`);
+                    if (selectElement) {
+                        selectElement.innerHTML = '';
+                        this.roster.forEach(pokemon => {
+                            const option = document.createElement('option');
+                            option.value = pokemon; option.textContent = pokemon;
+                            if (this.slots[i].pokemon === pokemon) option.selected = true;
+                            selectElement.appendChild(option);
+                        });
+                    }
+                }
+            }
+
+            /**
+             * 特定スロットのダメージUIを更新する
+             * @param {number} index - スロットのインデックス（0=バトル場, 1~5=ベンチ）
+             * @returns {void}
+             */
+            updateDamageDisplay(index) {
+                document.getElementById(`damage-${index}`).textContent = this.slots[index].damage;
+            }
+
+            /**
+             * すべてのスロットのダメージUIを一括更新する
+             * @param なし
+             * @returns {void}
+             */
+            updateAllDamageDisplays() {
+                for (let i = 0; i < SYSTEM_CONFIG.TOTAL_SLOT_COUNT; i++) this.updateDamageDisplay(i);
+            }
+
+            /**
+             * 対象スロットのダメージを増減させる
+             * @param {number} index - スロットのインデックス
+             * @param {number} amount - ダメージの増減量（特殊コードの場合は全回復）
+             * @returns {void}
+             * @note ダメージは0未満にならないよう制御されます。
+             */
+            changeDamage(index, amount) {
+                if (amount === SYSTEM_CONFIG.HEAL_ALL_CODE) {
+                    this.slots[index].damage = SYSTEM_CONFIG.MINIMUM_DAMAGE;
+                } else {
+                    this.slots[index].damage = Math.max(SYSTEM_CONFIG.MINIMUM_DAMAGE, this.slots[index].damage + amount);
+                }
+                this.updateDamageDisplay(index);
+                this.saveData();
+            }
+
+            /**
+             * バトル場のポケモンをきぜつ（退場）させる
+             * @param なし
+             * @returns {void}
+             * @note ダメージと状態異常をリセットし、未設定状態に戻します。
+             */
+            faintActivePokemon() {
+                this.slots[SYSTEM_CONFIG.BATTLE_SLOT_INDEX] = { pokemon: SYSTEM_CONFIG.EMPTY_POKEMON_NAME, damage: SYSTEM_CONFIG.MINIMUM_DAMAGE };
+                this.clearStatus(); this.updateAllSelects(); this.updateDamageDisplay(SYSTEM_CONFIG.BATTLE_SLOT_INDEX);
+                this.saveData(); alert(UI_MESSAGES.ACTIVE_FAINT_ALERT);
+            }
+
+            /**
+             * 指定したベンチのポケモンをきぜつさせる
+             * @param {number} index - きぜつさせるベンチのインデックス
+             * @returns {void}
+             * @note アラートは出さず、対象枠を未設定状態に戻します。
+             */
+            faintBenchPokemon(index) {
+                this.slots[index] = { pokemon: SYSTEM_CONFIG.EMPTY_POKEMON_NAME, damage: SYSTEM_CONFIG.MINIMUM_DAMAGE };
+                this.updateAllSelects(); this.updateDamageDisplay(index);
+                this.saveData();
+            }
+
+            /**
+             * プルダウンで選択されたポケモンを内部データに反映する
+             * @param {number} index - スロットのインデックス
+             * @param {string} pokemonName - 選択されたポケモンの名前
+             * @returns {void}
+             */
+            updatePokemonSelection(index, pokemonName) {
+                this.slots[index].pokemon = pokemonName; this.saveData();
+            }
+
+            /**
+             * バトル場のポケモンと、指定したベンチポケモンを交代する
+             * @param {number} benchIndex - 交代対象のベンチのインデックス
+             * @returns {void}
+             * @note ルールに則り、ベンチへ下がったポケモンの状態異常は回復します。
+             */
+            swapWithActive(benchIndex) {
+                const temp = { ...this.slots[SYSTEM_CONFIG.BATTLE_SLOT_INDEX] };
+                this.slots[SYSTEM_CONFIG.BATTLE_SLOT_INDEX] = { ...this.slots[benchIndex] };
+                this.slots[benchIndex] = temp;
+                this.clearStatus(); this.updateAllSelects(); this.updateDamageDisplay(SYSTEM_CONFIG.BATTLE_SLOT_INDEX); this.updateDamageDisplay(benchIndex);
+                this.saveData();
+            }
+
+            /**
+             * 登録済みポケモンのリストをHTMLとして生成し描画する
+             * @param なし
+             * @returns {void}
+             */
+            renderSetupList() {
+                const list = document.getElementById('pokemon-list');
+                list.innerHTML = '';
+                this.roster.filter(p => p !== SYSTEM_CONFIG.EMPTY_POKEMON_NAME).forEach(pokemon => {
+                    list.innerHTML += `<li><span>${pokemon}</span><button class="btn-delete" onclick="app.deletePokemon('${pokemon}')">削除</button></li>`; 
+                });
+            }
+
+            /**
+             * テキスト入力欄の値を取得し、新しいポケモンをリストに追加する
+             * @param なし
+             * @returns {void}
+             * @note 重複する名前や空文字は追加されません。
+             */
+            addPokemon() {
+                const input = document.getElementById('new-pokemon');
+                const newName = input.value.trim();
+                if (newName && !this.roster.includes(newName)) {
+                    this.roster.push(newName); input.value = '';
+                    this.renderSetupList(); this.updateAllSelects(); this.saveData();
+                }
+            }
+
+            /**
+             * 指定したポケモンを登録リストから削除する
+             * @param {string} targetPokemon - 削除するポケモンの名前
+             * @returns {void}
+             * @note 盤面に出ているポケモンを削除した場合、その枠は未設定に戻ります。
+             */
+            deletePokemon(targetPokemon) {
+                if (!confirm(UI_MESSAGES.DELETE_CONFIRM(targetPokemon))) return;
+                this.roster = this.roster.filter(pokemon => pokemon !== targetPokemon);
+                this.slots.forEach((slot, i) => {
+                    if (slot.pokemon === targetPokemon) {
+                        this.slots[i] = { pokemon: SYSTEM_CONFIG.EMPTY_POKEMON_NAME, damage: SYSTEM_CONFIG.MINIMUM_DAMAGE };
+                        if(i === SYSTEM_CONFIG.BATTLE_SLOT_INDEX) this.clearStatus(); 
+                    }
+                });
+                this.renderSetupList(); this.updateAllSelects(); this.updateAllDamageDisplays(); this.saveData();
+            }
+
+            /**
+             * アプリの表示タブ（バトル画面 / ポケモン登録画面）を切り替える
+             * @param {string} tabName - 表示したいタブのID（'battle' または 'setup'）
+             * @returns {void}
+             */
+            switchTab(tabName) {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+                document.getElementById(`screen-${tabName}`).classList.add('active');
+            }
+        }
+        
+        // アプリケーションの起動
+        const app = new PokecaApp();
+    </script>
+</body>
+</html>
